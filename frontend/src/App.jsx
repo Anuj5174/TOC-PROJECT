@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
-import AutomataGraph from './components/AutomataGraph';
 import DatasetPanel from './components/DatasetPanel';
 import LearningPanel from './components/LearningPanel';
 import SimulationPanel from './components/SimulationPanel';
-import TOCVerificationPanel from './components/TOCVerificationPanel';
 import NoiseStudyPanel from './components/NoiseStudyPanel';
-import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000/api';
 
@@ -23,7 +21,7 @@ export default function App() {
   // Empirical study results
   const [quantityResults, setQuantityResults] = useState(null);
   const [noiseResults, setNoiseResults] = useState(null);
-  const [clusterResults, setClusterResults] = useState(null);
+  const [diversityResults, setDiversityResults] = useState(null);
 
   // 1. Initial Load: Fetch benchmarks
   useEffect(() => {
@@ -176,16 +174,16 @@ export default function App() {
     }
   };
 
-  const handleRunClustering = async (params) => {
+  const handleRunDiversityExperiment = async (params) => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/cluster`, {
+      const res = await fetch(`${API_BASE}/experiments/diversity`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
       });
       const data = await res.json();
-      setClusterResults(data);
+      setDiversityResults(data);
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -219,7 +217,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
         {activeTab === 'automata' && (
           <SimulationPanel
-            inferredDfa={learningResult?.minimized_dfa || learningResult?.inferred_dfa}
+            inferredDfa={learningResult?.inferred_dfa}
             referenceDfa={referenceDfa}
             alphabet={dataset?.alphabet || ['0', '1']}
           />
@@ -248,24 +246,15 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'verification' && (
-          <TOCVerificationPanel
-            learningResult={learningResult}
-            referenceDfa={referenceDfa}
-          />
-        )}
-
         {activeTab === 'experiments' && (
           <NoiseStudyPanel
             selectedBenchmark={selectedBenchmark}
-            inferredDfa={learningResult?.minimized_dfa || learningResult?.inferred_dfa}
-            dataset={dataset}
             onRunQuantityExperiment={handleRunQuantityExperiment}
             onRunNoiseExperiment={handleRunNoiseExperiment}
-            onRunClustering={handleRunClustering}
+            onRunDiversityExperiment={handleRunDiversityExperiment}
             quantityResults={quantityResults}
             noiseResults={noiseResults}
-            clusterResults={clusterResults}
+            diversityResults={diversityResults}
             loading={loading}
           />
         )}
@@ -273,7 +262,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/80 py-4 text-center text-xs text-slate-500 font-mono">
-        Theory of Computation Educational Tool • Automata Grammatical Inference (RPNI, EDSM, Angluin L*) • Fast API & React
+        Problem 8: Learning & Visualizing DFA/NFA Models from Training Data • FastAPI & React Studio
       </footer>
     </div>
   );

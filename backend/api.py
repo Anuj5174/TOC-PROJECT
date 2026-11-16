@@ -1,5 +1,12 @@
 """
 FastAPI REST API endpoints for Automata Learning, Simulation, and Investigation.
+Matches Problem 8 Objectives:
+- Dataset generation over configurable alphabets
+- DFA & NFA representations and string-acceptance simulation
+- Automata inference (RPNI / EDSM)
+- Visualizing states, transitions, accepting states, execution paths
+- Measuring model accuracy, state count, and generalization on unseen strings
+- Empirical studies on training quantity, diversity, and quality (noise)
 """
 
 from typing import List, Dict, Any, Optional
@@ -8,17 +15,17 @@ from pydantic import BaseModel
 
 from backend.automata.dfa import DFA
 from backend.automata.nfa import NFA
-from backend.automata.minimization import minimize_dfa_table_filling
-from backend.automata.equivalence import check_dfa_equivalence
 from backend.datasets.benchmarks import list_benchmarks, get_benchmark, BENCHMARKS
 from backend.datasets.generator import create_dataset
 from backend.learning.pta import PTA
 from backend.learning.rpni import RPNI
 from backend.learning.edsm import EDSM
-from backend.learning.active_learning import AngluinLStar
 from backend.analysis.metrics import evaluate_model
-from backend.analysis.noise_study import run_quantity_experiment, run_noise_experiment
-from backend.analysis.clustering import cluster_strings
+from backend.analysis.noise_study import (
+    run_quantity_experiment,
+    run_noise_experiment,
+    run_diversity_experiment
+)
 
 router = APIRouter(prefix="/api")
 
@@ -35,7 +42,7 @@ class DatasetGenerateRequest(BaseModel):
 
 
 class LearnRequest(BaseModel):
-    algorithm: str = "rpni"  # "rpni", "edsm", "lstar"
+    algorithm: str = "rpni"  # "rpni" or "edsm"
     benchmark_id: Optional[str] = None
     alphabet: List[str]
     positive_examples: List[str]
@@ -66,11 +73,12 @@ class NoiseExperimentRequest(BaseModel):
     repeats: int = 3
 
 
-class ClusterRequest(BaseModel):
-    strings_data: List[Dict[str, Any]]
-    dfa_data: Optional[Dict[str, Any]] = None
-    alphabet: Optional[List[str]] = None
-    n_clusters: int = 2
+class DiversityExperimentRequest(BaseModel):
+    benchmark_id: str = "even_zeros"
+    max_lengths: Optional[List[int]] = [3, 4, 5, 6, 7, 8, 9]
+    train_size: int = 40
+    test_size: int = 80
+    repeats: int = 3
 
 
 # Endpoints
@@ -130,42 +138,28 @@ def api_learn_automaton(req: LearnRequest):
         pta_obj = PTA(pos, set(alphabet))
         pta_dict = pta_obj.to_dict()
 
-        # 2. Run selected algorithm
+        # 2. Run selected inference algorithm
         history = []
-        lstar_table_history = []
         if req.algorithm.lower() == "rpni":
             learner = RPNI(pos, neg, alphabet, noise_tolerance=req.noise_tolerance)
-            raw_inferred_dfa, history = learner.run()
+            inferred_dfa, history = learner.run()
         elif req.algorithm.lower() == "edsm":
             learner = EDSM(pos, neg, alphabet)
-            raw_inferred_dfa, history = learner.run()
-        elif req.algorithm.lower() == "lstar":
-            if not req.benchmark_id or req.benchmark_id not in BENCHMARKS:
-                raise HTTPException(status_code=400, detail="Active learning (L*) requires an oracle benchmark.")
-            bench = BENCHMARKS[req.benchmark_id]
-            lstar = AngluinLStar(alphabet, bench.accepts, bench.reference_dfa)
-            raw_inferred_dfa, lstar_history = lstar.run()
-            lstar_table_history = lstar_history
+            inferred_dfa, history = learner.run()
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown algorithm '{req.algorithm}'.")
+            raise HTTPException(status_code=400, detail=f"Unknown algorithm '{req.algorithm}'. Supported: 'rpni', 'edsm'.")
 
-        # 3. Minimization via Myhill-Nerode Table-Filling
-        minimized_dfa, min_viz = minimize_dfa_table_filling(raw_inferred_dfa)
-
-        # 4. Evaluation if test_set provided
+        # 3. Evaluation on unseen strings if test_set provided
         evaluation = None
         if req.test_set:
-            evaluation = evaluate_model(minimized_dfa, req.test_set, ref_dfa)
+            evaluation = evaluate_model(inferred_dfa, req.test_set, ref_dfa)
         elif ref_dfa:
-            evaluation = evaluate_model(minimized_dfa, [], ref_dfa)
+            evaluation = evaluate_model(inferred_dfa, [], ref_dfa)
 
         return {
-            "inferred_dfa": raw_inferred_dfa.to_dict(),
-            "minimized_dfa": minimized_dfa.to_dict(),
+            "inferred_dfa": inferred_dfa.to_dict(),
             "pta": pta_dict,
             "merge_history": history,
-            "lstar_history": lstar_table_history,
-            "minimization_details": min_viz,
             "evaluation": evaluation
         }
     except Exception as e:
@@ -182,11 +176,10 @@ def api_simulate_string(req: SimulateRequest):
             nfa = NFA(
                 states=set(req.nfa_data["states"]),
                 alphabet=set(req.nfa_data["alphabet"]),
-                transitions={},  # populated below
+                transitions={},
                 start_state=req.nfa_data["start_state"],
                 accepting_states=set(req.nfa_data["accepting_states"])
             )
-            # Reconstruct transitions
             for edge in req.nfa_data.get("transitions", []):
                 u, v, lbl = edge["from"], edge["to"], edge["label"]
                 if u not in nfa.transitions:
@@ -229,15 +222,15 @@ def api_noise_experiment(req: NoiseExperimentRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/cluster")
-def api_cluster_strings(req: ClusterRequest):
+@router.post("/experiments/diversity")
+def api_diversity_experiment(req: DiversityExperimentRequest):
     try:
-        dfa = DFA.from_dict(req.dfa_data) if req.dfa_data else None
-        return cluster_strings(
-            strings_data=req.strings_data,
-            dfa=dfa,
-            alphabet=req.alphabet,
-            n_clusters=req.n_clusters
+        return run_diversity_experiment(
+            benchmark_id=req.benchmark_id,
+            max_lengths=req.max_lengths,
+            train_size=req.train_size,
+            test_size=req.test_size,
+            repeats=req.repeats
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

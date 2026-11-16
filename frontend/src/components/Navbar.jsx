@@ -1,13 +1,12 @@
 import React from 'react';
-import { Network, Database, Cpu, PlayCircle, BarChart3, HelpCircle } from 'lucide-react';
+import { Network, Database, Cpu, BarChart3 } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'automata', label: 'Automata & Simulation', icon: Network },
-    { id: 'dataset', label: 'Dataset & Generator', icon: Database },
-    { id: 'learning', label: 'Grammatical Inference', icon: Cpu },
-    { id: 'verification', label: 'TOC Equivalence & Minimization', icon: PlayCircle },
-    { id: 'experiments', label: 'Noise & Empirical Study', icon: BarChart3 },
+    { id: 'dataset', label: 'Dataset Generator', icon: Database },
+    { id: 'learning', label: 'Automata Inference', icon: Cpu },
+    { id: 'experiments', label: 'Empirical Study', icon: BarChart3 },
   ];
 
   return (
@@ -23,7 +22,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 TOC Automata Studio
               </span>
               <span className="hidden sm:inline-block ml-2 text-xs px-2 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800">
-                RPNI • EDSM • L* Active Learning
+                DFA & NFA Learning • Simulation • Empirical Studies
               </span>
             </div>
           </div>

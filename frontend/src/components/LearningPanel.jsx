@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cpu, Play, CheckCircle2, XCircle, ArrowRight, Table, GitCommit, Layers } from 'lucide-react';
+import { Cpu, Play, CheckCircle2, XCircle, ArrowRight, Table, GitCommit } from 'lucide-react';
 import AutomataGraph from './AutomataGraph';
 
 export default function LearningPanel({
@@ -12,7 +12,7 @@ export default function LearningPanel({
 }) {
   const [algorithm, setAlgorithm] = useState('rpni');
   const [noiseTolerance, setNoiseTolerance] = useState(0.0);
-  const [activeView, setActiveView] = useState('inferred'); // 'inferred', 'minimized', 'pta', 'reference', 'merges', 'lstar'
+  const [activeView, setActiveView] = useState('inferred'); // 'inferred', 'pta', 'merges'
 
   const currentBenchmark = benchmarks.find(b => b.id === selectedBenchmark);
 
@@ -33,8 +33,6 @@ export default function LearningPanel({
   };
 
   const mergeHistory = learningResult?.merge_history || [];
-  const lstarHistory = learningResult?.lstar_history || [];
-  const lastLstarStep = lstarHistory.length > 0 ? lstarHistory[lstarHistory.length - 1] : null;
 
   return (
     <div className="space-y-6">
@@ -54,7 +52,7 @@ export default function LearningPanel({
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                RPNI (Prefix Order)
+                RPNI (Shortlex Order)
               </button>
               <button
                 onClick={() => setAlgorithm('edsm')}
@@ -65,16 +63,6 @@ export default function LearningPanel({
                 }`}
               >
                 EDSM (Evidence Driven)
-              </button>
-              <button
-                onClick={() => setAlgorithm('lstar')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  algorithm === 'lstar'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Angluin L* (Active Learning)
               </button>
             </div>
           </div>
@@ -120,18 +108,7 @@ export default function LearningPanel({
             }`}
           >
             <Cpu className="w-3.5 h-3.5 mr-1.5" />
-            Learned Automaton ({learningResult?.inferred_dfa?.states?.length || 0} states)
-          </button>
-          <button
-            onClick={() => setActiveView('minimized')}
-            className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              activeView === 'minimized'
-                ? 'bg-sky-600 text-white'
-                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 mr-1.5" />
-            Minimized DFA ({learningResult?.minimized_dfa?.states?.length || 0} states)
+            Inferred Automaton ({learningResult?.inferred_dfa?.states?.length || 0} states)
           </button>
           <button
             onClick={() => setActiveView('pta')}
@@ -144,36 +121,22 @@ export default function LearningPanel({
             <GitCommit className="w-3.5 h-3.5 mr-1.5" />
             Prefix Tree Acceptor (PTA) ({learningResult?.pta?.states?.length || 0} states)
           </button>
-          {algorithm === 'lstar' ? (
-            <button
-              onClick={() => setActiveView('lstar')}
-              className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                activeView === 'lstar'
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Table className="w-3.5 h-3.5 mr-1.5" />
-              L* Observation Table
-            </button>
-          ) : (
-            <button
-              onClick={() => setActiveView('merges')}
-              className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                activeView === 'merges'
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Table className="w-3.5 h-3.5 mr-1.5" />
-              State Merges History ({mergeHistory.length})
-            </button>
-          )}
+          <button
+            onClick={() => setActiveView('merges')}
+            className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              activeView === 'merges'
+                ? 'bg-sky-600 text-white'
+                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Table className="w-3.5 h-3.5 mr-1.5" />
+            State Merges History ({mergeHistory.length})
+          </button>
         </div>
 
         {currentBenchmark && (
           <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-            Ground Truth Target: <strong className="text-sky-300">{currentBenchmark.name}</strong>
+            Target Language: <strong className="text-sky-300">{currentBenchmark.name}</strong>
           </span>
         )}
       </div>
@@ -182,17 +145,8 @@ export default function LearningPanel({
       {activeView === 'inferred' && (
         <AutomataGraph
           dfa={learningResult?.inferred_dfa}
-          title="Inferred Finite Automaton"
-          subtitle={`Learned via ${algorithm.toUpperCase()} from ${dataset?.train?.length || 0} labeled samples`}
-          height="450px"
-        />
-      )}
-
-      {activeView === 'minimized' && (
-        <AutomataGraph
-          dfa={learningResult?.minimized_dfa}
-          title="Canonical Minimized DFA"
-          subtitle="Reduced using Myhill-Nerode Table-Filling indistinguishability theorem"
+          title="Inferred Finite-State Automaton"
+          subtitle={`Synthesized via ${algorithm.toUpperCase()} from ${dataset?.train?.length || 0} labeled samples`}
           height="450px"
         />
       )}
@@ -206,7 +160,7 @@ export default function LearningPanel({
         />
       )}
 
-      {/* RPNI / EDSM Merge History View */}
+      {/* State Merges Trace */}
       {activeView === 'merges' && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
           <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex justify-between items-center">
@@ -250,94 +204,58 @@ export default function LearningPanel({
                         </span>
                       )}
                     </td>
-                    <td className="py-2 px-4 text-slate-400">{m.remaining_states_count}</td>
-                    <td className="py-2 px-4 text-slate-300 text-[11px]">{m.reason}</td>
+                    <td className="py-2 px-4 text-slate-300 font-bold">{m.states_count}</td>
+                    <td className="py-2 px-4 text-slate-400">{m.reason}</td>
                   </tr>
                 ))}
-                {mergeHistory.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-500 italic">
-                      No merges logged yet. Run inference to generate trace.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* Angluin L* Observation Table View */}
-      {activeView === 'lstar' && lastLstarStep && lastLstarStep.table_snapshot && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg space-y-4 p-5">
-          <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-            <div>
-              <h4 className="text-sm font-semibold text-slate-100">Angluin L* Observation Table T(S, E)</h4>
-              <p className="text-xs text-slate-400">
-                Active learning Minimally Adequate Teacher (MAT) table: Rows S (upper) and S · Σ (lower), Columns E (test suffixes).
-              </p>
+      {/* Quantitative Evaluation Metrics */}
+      {learningResult?.evaluation && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+            <span className="text-xs text-slate-400">Generalization Accuracy</span>
+            <div className="text-2xl font-bold text-emerald-400 mt-1">
+              {(learningResult.evaluation.metrics.accuracy * 100).toFixed(1)}%
             </div>
-            <div className="text-xs font-mono text-sky-400">
-              Total Membership Queries: {lastLstarStep.table_snapshot.queries_so_far}
-            </div>
+            <span className="text-[11px] text-slate-500">Evaluated on unseen test set</span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border border-slate-800 font-mono">
-              <thead className="bg-slate-950 text-slate-400 uppercase text-[11px]">
-                <tr>
-                  <th className="py-2 px-3 border border-slate-800">Prefix (s ∈ S ∪ S·Σ)</th>
-                  {lastLstarStep.table_snapshot.columns.map((col, idx) => (
-                    <th key={idx} className="py-2 px-3 border border-slate-800 text-center font-bold text-sky-300">
-                      e = "{col}"
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {/* Upper Table S */}
-                <tr className="bg-slate-950/80 font-sans text-slate-400 font-semibold">
-                  <td colSpan={lastLstarStep.table_snapshot.columns.length + 1} className="py-1 px-3 text-[10px]">
-                    ▲ UPPER TABLE S (Confirmed State Representatives)
-                  </td>
-                </tr>
-                {lastLstarStep.table_snapshot.upper_rows.map((row, rIdx) => (
-                  <tr key={`u-${rIdx}`} className="hover:bg-slate-800/40 bg-sky-950/10">
-                    <td className="py-1.5 px-3 border border-slate-800 font-bold text-sky-400">
-                      "{row.prefix}"
-                    </td>
-                    {row.values.map((v, cIdx) => (
-                      <td key={cIdx} className="py-1.5 px-3 border border-slate-800 text-center">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${v ? 'bg-emerald-900/60 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-                          {v ? '1' : '0'}
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+            <span className="text-xs text-slate-400">Inferred States</span>
+            <div className="text-2xl font-bold text-sky-400 mt-1">
+              {learningResult.evaluation.structural.state_count}
+              {learningResult.evaluation.structural.reference_state_count && (
+                <span className="text-sm font-normal text-slate-500 ml-1.5">
+                  / {learningResult.evaluation.structural.reference_state_count} ref
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] text-slate-500">Total states in learned model</span>
+          </div>
 
-                {/* Lower Table S . Sigma */}
-                <tr className="bg-slate-950/80 font-sans text-slate-400 font-semibold">
-                  <td colSpan={lastLstarStep.table_snapshot.columns.length + 1} className="py-1 px-3 text-[10px]">
-                    ▼ LOWER TABLE S · Σ \ S (Frontier Boundary Transitions)
-                  </td>
-                </tr>
-                {lastLstarStep.table_snapshot.lower_rows.map((row, rIdx) => (
-                  <tr key={`l-${rIdx}`} className="hover:bg-slate-800/40">
-                    <td className="py-1.5 px-3 border border-slate-800 text-slate-300">
-                      "{row.prefix}"
-                    </td>
-                    {row.values.map((v, cIdx) => (
-                      <td key={cIdx} className="py-1.5 px-3 border border-slate-800 text-center">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${v ? 'bg-emerald-900/60 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-                          {v ? '1' : '0'}
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+            <span className="text-xs text-slate-400">Precision / Recall</span>
+            <div className="text-lg font-bold text-slate-200 mt-1">
+              {(learningResult.evaluation.metrics.precision * 100).toFixed(0)}% / {(learningResult.evaluation.metrics.recall * 100).toFixed(0)}%
+            </div>
+            <span className="text-[11px] text-slate-500 font-mono">
+              F1: {learningResult.evaluation.metrics.f1_score}
+            </span>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+            <span className="text-xs text-slate-400">Confusion Matrix</span>
+            <div className="text-xs font-mono text-slate-300 grid grid-cols-2 gap-1 mt-1">
+              <span className="text-emerald-400">TP: {learningResult.evaluation.metrics.confusion_matrix.tp}</span>
+              <span className="text-rose-400">FP: {learningResult.evaluation.metrics.confusion_matrix.fp}</span>
+              <span className="text-emerald-400">TN: {learningResult.evaluation.metrics.confusion_matrix.tn}</span>
+              <span className="text-rose-400">FN: {learningResult.evaluation.metrics.confusion_matrix.fn}</span>
+            </div>
           </div>
         </div>
       )}

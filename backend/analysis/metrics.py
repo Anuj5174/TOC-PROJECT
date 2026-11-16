@@ -1,11 +1,10 @@
 """
 Evaluation metrics: Classification performance (Accuracy, Precision, Recall, F1, Confusion Matrix)
-and Automata structural properties.
+and Automata structural properties (State count, Transition count).
 """
 
 from typing import List, Dict, Any, Optional
 from backend.automata.dfa import DFA
-from backend.automata.equivalence import check_dfa_equivalence
 
 
 def evaluate_model(
@@ -61,12 +60,9 @@ def evaluate_model(
         "accepting_states_count": len(dfa.accepting_states)
     }
 
-    equiv_data = None
     if reference_dfa is not None:
-        equiv_res = check_dfa_equivalence(dfa, reference_dfa)
         structural_data["reference_state_count"] = len(reference_dfa.states)
         structural_data["state_ratio"] = round(len(dfa.states) / len(reference_dfa.states), 2)
-        equiv_data = equiv_res
 
     return {
         "metrics": {
@@ -83,6 +79,5 @@ def evaluate_model(
             }
         },
         "structural": structural_data,
-        "equivalence": equiv_data,
         "predictions": detailed_predictions
     }

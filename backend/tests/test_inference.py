@@ -1,5 +1,5 @@
 """
-Unit tests for RPNI, EDSM, and Angluin's L* active learning.
+Unit tests for RPNI and EDSM automata-inference algorithms.
 """
 
 import unittest
@@ -7,8 +7,6 @@ from backend.datasets.benchmarks import get_benchmark
 from backend.datasets.generator import create_dataset
 from backend.learning.rpni import RPNI
 from backend.learning.edsm import EDSM
-from backend.learning.active_learning import AngluinLStar
-from backend.automata.equivalence import check_dfa_equivalence
 
 
 class TestInference(unittest.TestCase):
@@ -30,9 +28,11 @@ class TestInference(unittest.TestCase):
         for n in neg:
             self.assertFalse(inferred_dfa.accepts(n), f"RPNI failed on negative '{n}'")
 
-        # Equivalence check with ground truth
-        equiv_res = check_dfa_equivalence(inferred_dfa, bench.reference_dfa)
-        self.assertTrue(equiv_res["equivalent"])
+        # Generalization on test set
+        for item in ds["test"]:
+            w = item["raw_word"]
+            expected = item["label"]
+            self.assertEqual(inferred_dfa.accepts(w), expected)
 
     def test_edsm_learning(self):
         bench = get_benchmark("ends_with_01")
@@ -43,24 +43,11 @@ class TestInference(unittest.TestCase):
         edsm = EDSM(pos, neg, bench.alphabet)
         inferred_dfa, history = edsm.run()
 
+        self.assertGreater(len(history), 0)
         for p in pos:
             self.assertTrue(inferred_dfa.accepts(p))
         for n in neg:
             self.assertFalse(inferred_dfa.accepts(n))
-
-    def test_angluin_l_star(self):
-        bench = get_benchmark("even_zeros")
-        learner = AngluinLStar(
-            alphabet=bench.alphabet,
-            oracle=bench.accepts,
-            reference_dfa=bench.reference_dfa
-        )
-        learned_dfa, history = learner.run()
-
-        self.assertGreater(len(history), 0)
-        equiv_res = check_dfa_equivalence(learned_dfa, bench.reference_dfa)
-        self.assertTrue(equiv_res["equivalent"])
-        self.assertEqual(len(learned_dfa.states), 2)
 
 
 if __name__ == "__main__":
