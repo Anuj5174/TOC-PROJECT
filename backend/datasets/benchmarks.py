@@ -1,10 +1,11 @@
 """
-Benchmark Regular Languages and their canonical Reference DFAs for TOC education.
+Benchmark Regular Languages and their canonical Reference DFAs & NFAs for TOC education.
 Includes languages with varying complexity (state count 2 to 5).
 """
 
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, Optional, List
 from backend.automata.dfa import DFA
+from backend.automata.nfa import NFA
 
 
 class BenchmarkLanguage:
@@ -16,7 +17,8 @@ class BenchmarkLanguage:
         description: str,
         formal_definition: str,
         reference_dfa: DFA,
-        oracle_func: Callable[[str], bool]
+        oracle_func: Callable[[str], bool],
+        reference_nfa: Optional[NFA] = None
     ):
         self.id = id
         self.name = name
@@ -25,6 +27,7 @@ class BenchmarkLanguage:
         self.formal_definition = formal_definition
         self.reference_dfa = reference_dfa
         self.oracle_func = oracle_func
+        self.reference_nfa = reference_nfa
 
     def accepts(self, word: str) -> bool:
         return self.oracle_func(word)
@@ -44,6 +47,16 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         start_state="q0",
         accepting_states={"q0"}
     )
+    nfa_even_0s = NFA(
+        states={"s0", "s1"},
+        alphabet={"0", "1"},
+        transitions={
+            "s0": {"0": {"s1"}, "1": {"s0"}},
+            "s1": {"0": {"s0"}, "1": {"s1"}}
+        },
+        start_state="s0",
+        accepting_states={"s0"}
+    )
     benchmarks["even_zeros"] = BenchmarkLanguage(
         id="even_zeros",
         name="Even Number of 0s",
@@ -51,6 +64,7 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         description="Accepts binary strings containing an even number of 0s (0, 2, 4, ...).",
         formal_definition="L = { w ∈ {0, 1}* | |w|_0 ≡ 0 (mod 2) }",
         reference_dfa=dfa_even_0s,
+        reference_nfa=nfa_even_0s,
         oracle_func=lambda w: w.count("0") % 2 == 0
     )
 
@@ -66,6 +80,18 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         start_state="q0",
         accepting_states={"q2"}
     )
+    # Canonical textbook NFA: guess the suffix '01' at any point!
+    nfa_ends_01 = NFA(
+        states={"s0", "s1", "s2"},
+        alphabet={"0", "1"},
+        transitions={
+            "s0": {"0": {"s0", "s1"}, "1": {"s0"}},
+            "s1": {"1": {"s2"}},
+            "s2": {}
+        },
+        start_state="s0",
+        accepting_states={"s2"}
+    )
     benchmarks["ends_with_01"] = BenchmarkLanguage(
         id="ends_with_01",
         name="Ends with '01'",
@@ -73,6 +99,7 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         description="Accepts all binary strings ending with the suffix '01'.",
         formal_definition="L = { w ∈ {0, 1}* | w = x01 for some x ∈ {0, 1}* }",
         reference_dfa=dfa_ends_01,
+        reference_nfa=nfa_ends_01,
         oracle_func=lambda w: w.endswith("01")
     )
 
@@ -89,6 +116,19 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         start_state="q0",
         accepting_states={"q3"}
     )
+    # Canonical textbook NFA: loop on s0, non-deterministically branch on '1' into '101'
+    nfa_contains_101 = NFA(
+        states={"s0", "s1", "s2", "s3"},
+        alphabet={"0", "1"},
+        transitions={
+            "s0": {"0": {"s0"}, "1": {"s0", "s1"}},
+            "s1": {"0": {"s2"}},
+            "s2": {"1": {"s3"}},
+            "s3": {"0": {"s3"}, "1": {"s3"}}
+        },
+        start_state="s0",
+        accepting_states={"s3"}
+    )
     benchmarks["contains_101"] = BenchmarkLanguage(
         id="contains_101",
         name="Contains Substring '101'",
@@ -96,11 +136,11 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         description="Accepts binary strings that contain '101' as a contiguous substring.",
         formal_definition="L = { w ∈ {0, 1}* | w contains '101' }",
         reference_dfa=dfa_contains_101,
+        reference_nfa=nfa_contains_101,
         oracle_func=lambda w: "101" in w
     )
 
-    # 4. Binary number divisible by 3 (empty string = 0 divisible by 3)
-    # Transitions track modulo remainder: q0=0 mod 3, q1=1 mod 3, q2=2 mod 3
+    # 4. Binary number divisible by 3
     dfa_mod3 = DFA(
         states={"q0", "q1", "q2"},
         alphabet={"0", "1"},
@@ -112,6 +152,17 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         start_state="q0",
         accepting_states={"q0"}
     )
+    nfa_mod3 = NFA(
+        states={"s0", "s1", "s2"},
+        alphabet={"0", "1"},
+        transitions={
+            "s0": {"0": {"s0"}, "1": {"s1"}},
+            "s1": {"0": {"s2"}, "1": {"s0"}},
+            "s2": {"0": {"s1"}, "1": {"s2"}}
+        },
+        start_state="s0",
+        accepting_states={"s0"}
+    )
     benchmarks["divisible_by_3"] = BenchmarkLanguage(
         id="divisible_by_3",
         name="Binary Divisible by 3",
@@ -119,6 +170,7 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         description="Interprets binary string as integer value (MSB to LSB). Accepts if divisible by 3.",
         formal_definition="L = { w ∈ {0, 1}* | val(w) ≡ 0 (mod 3) }",
         reference_dfa=dfa_mod3,
+        reference_nfa=nfa_mod3,
         oracle_func=lambda w: (int(w, 2) % 3 == 0) if w else True
     )
 
@@ -134,6 +186,16 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         start_state="q0",
         accepting_states={"q0", "q1"}
     )
+    nfa_no_consecutive_1s = NFA(
+        states={"s0", "s1"},
+        alphabet={"0", "1"},
+        transitions={
+            "s0": {"0": {"s0"}, "1": {"s1"}},
+            "s1": {"0": {"s0"}}
+        },
+        start_state="s0",
+        accepting_states={"s0", "s1"}
+    )
     benchmarks["no_consecutive_1s"] = BenchmarkLanguage(
         id="no_consecutive_1s",
         name="No Consecutive 1s",
@@ -141,6 +203,7 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         description="Accepts binary strings that never contain '11'.",
         formal_definition="L = { w ∈ {0, 1}* | w does not contain '11' }",
         reference_dfa=dfa_no_consecutive_1s,
+        reference_nfa=nfa_no_consecutive_1s,
         oracle_func=lambda w: "11" not in w
     )
 
@@ -158,6 +221,19 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         start_state="q0",
         accepting_states={"qa_ok", "qb_ok"}
     )
+    nfa_same_start_end = NFA(
+        states={"s0", "sa1", "sa2", "sb1", "sb2"},
+        alphabet={"a", "b"},
+        transitions={
+            "s0": {"a": {"sa1"}, "b": {"sb1"}},
+            "sa1": {"a": {"sa1", "sa2"}, "b": {"sa1"}},
+            "sa2": {},
+            "sb1": {"a": {"sb1"}, "b": {"sb1", "sb2"}},
+            "sb2": {}
+        },
+        start_state="s0",
+        accepting_states={"sa1", "sa2", "sb1", "sb2"}
+    )
     benchmarks["same_start_end"] = BenchmarkLanguage(
         id="same_start_end",
         name="Starts and Ends with Same Symbol",
@@ -165,6 +241,7 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         description="Accepts strings over {a, b} of length >= 1 that begin and end with the same letter.",
         formal_definition="L = { w ∈ {a, b}+ | w[0] = w[-1] }",
         reference_dfa=dfa_same_start_end,
+        reference_nfa=nfa_same_start_end,
         oracle_func=lambda w: len(w) >= 1 and w[0] == w[-1]
     )
 
@@ -180,6 +257,16 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         start_state="q0",
         accepting_states={"q0"}
     )
+    nfa_ab_star = NFA(
+        states={"s0", "s1"},
+        alphabet={"a", "b"},
+        transitions={
+            "s0": {"a": {"s1"}},
+            "s1": {"b": {"s0"}}
+        },
+        start_state="s0",
+        accepting_states={"s0"}
+    )
     benchmarks["ab_star"] = BenchmarkLanguage(
         id="ab_star",
         name="Language (ab)*",
@@ -187,6 +274,7 @@ def _build_benchmarks() -> Dict[str, BenchmarkLanguage]:
         description="Accepts alternating sequences of 'ab', including the empty string ε.",
         formal_definition="L = { (ab)^k | k >= 0 }",
         reference_dfa=dfa_ab_star,
+        reference_nfa=nfa_ab_star,
         oracle_func=lambda w: len(w) % 2 == 0 and all(w[i:i+2] == "ab" for i in range(0, len(w), 2))
     )
 
@@ -210,7 +298,8 @@ def list_benchmarks() -> list:
             "alphabet": b.alphabet,
             "description": b.description,
             "formal_definition": b.formal_definition,
-            "state_count": len(b.reference_dfa.states)
+            "state_count": len(b.reference_dfa.states),
+            "has_nfa": b.reference_nfa is not None
         }
         for b in BENCHMARKS.values()
     ]

@@ -13,6 +13,7 @@ export default function App() {
   const [benchmarks, setBenchmarks] = useState([]);
   const [selectedBenchmark, setSelectedBenchmark] = useState('even_zeros');
   const [referenceDfa, setReferenceDfa] = useState(null);
+  const [referenceNfa, setReferenceNfa] = useState(null);
   const [dataset, setDataset] = useState(null);
   const [learningResult, setLearningResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -50,6 +51,7 @@ export default function App() {
       if (!res.ok) throw new Error("Benchmark not found");
       const data = await res.json();
       setReferenceDfa(data.reference_dfa);
+      setReferenceNfa(data.reference_nfa || null);
 
       // Auto-generate initial dataset
       const dsRes = await fetch(`${API_BASE}/dataset/generate`, {
@@ -219,6 +221,7 @@ export default function App() {
           <SimulationPanel
             inferredDfa={learningResult?.inferred_dfa}
             referenceDfa={referenceDfa}
+            referenceNfa={referenceNfa}
             alphabet={dataset?.alphabet || ['0', '1']}
           />
         )}

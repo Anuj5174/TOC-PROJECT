@@ -7,12 +7,14 @@ export default function AutomataGraph({
   title = "Automaton Graph",
   subtitle = "",
   activeState = null,
+  activeStates = null,
   highlightEdge = null,
   height = "380px"
 }) {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
 
+  // 1. Build and layout graph structure when dfa changes
   useEffect(() => {
     if (!containerRef.current || !dfa || !dfa.states) return;
 
@@ -32,7 +34,7 @@ export default function AutomataGraph({
     dfa.states.forEach(state => {
       const isStart = state === dfa.start_state;
       const isAccepting = (dfa.accepting_states || []).includes(state);
-      const isActive = activeState === state;
+      const isActive = activeState === state || (Array.isArray(activeStates) && activeStates.includes(state));
 
       elements.push({
         group: 'nodes',
@@ -86,7 +88,7 @@ export default function AutomataGraph({
             'width': '46px',
             'height': '46px',
             'transition-property': 'background-color, border-color, border-width, width, height',
-            'transition-duration': '0.2s'
+            'transition-duration': '0.15s'
           }
         },
         {
@@ -105,14 +107,15 @@ export default function AutomataGraph({
           }
         },
         {
-          selector: 'node[?isActive]',
+          selector: 'node.active',
           style: {
-            'background-color': '#f59e0b',
-            'border-color': '#fbbf24',
-            'border-width': '6px',
-            'color': '#0f172a',
-            'width': '52px',
-            'height': '52px'
+            'background-color': '#f59e0b !important',
+            'border-color': '#fbbf24 !important',
+            'border-width': '6px !important',
+            'color': '#0f172a !important',
+            'width': '52px !important',
+            'height': '52px !important',
+            'z-index': 999
           }
         },
         {
@@ -153,7 +156,23 @@ export default function AutomataGraph({
         cyRef.current.destroy();
       }
     };
-  }, [dfa, activeState]);
+  }, [dfa]);
+
+  // 2. High-speed smooth active state highlight updates (zero re-layout jitter)
+  useEffect(() => {
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+
+    cy.nodes().forEach(node => {
+      const id = node.id();
+      const isActive = (activeState === id) || (Array.isArray(activeStates) && activeStates.includes(id));
+      if (isActive) {
+        node.addClass('active');
+      } else {
+        node.removeClass('active');
+      }
+    });
+  }, [activeState, activeStates]);
 
   const fitView = () => {
     if (cyRef.current) {
@@ -181,44 +200,71 @@ export default function AutomataGraph({
     );
   }
 
+  const isNFA = dfa.type === "NFA";
+
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden flex flex-col shadow-lg">
-      <div className="px-4 py-2.5 bg-slate-950/60 border-b border-slate-800/80 flex items-center justify-between">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex flex-col">
+      {/* Header */}
+      <div className="p-3 bg-slate-950/60 border-b border-slate-800 flex justify-between items-center">
         <div>
-          <h4 className="text-sm font-semibold text-slate-200">{title}</h4>
+          <h4 className="text-sm font-semibold text-slate-100 flex items-center space-x-2">
+            <span>{title}</span>
+            {isNFA && (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-mono">
+                NFA
+              </span>
+            )}
+          </h4>
           {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+        <div className="flex items-center space-x-1.5">
+          <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-sky-400 font-mono font-medium">
             |Q|={dfa.states?.length || 0}
           </span>
-          <span className="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/40 font-mono">
+          <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono font-medium">
             |F|={dfa.accepting_states?.length || 0}
           </span>
           <button
             onClick={fitView}
-            title="Fit to view"
             className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            title="Fit to view"
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={relayout}
-            title="Re-layout nodes"
             className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            title="Reset layout"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
-      <div ref={containerRef} className="w-full relative" style={{ height }} />
-      <div className="px-3 py-1.5 bg-slate-950/40 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
+
+      {/* Cytoscape Container */}
+      <div
+        ref={containerRef}
+        className="w-full bg-slate-950/40 relative cursor-grab active:cursor-grabbing"
+        style={{ height }}
+      />
+
+      {/* Legend Footer */}
+      <div className="p-2 bg-slate-950/80 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 px-4">
         <div className="flex items-center space-x-3">
-          <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full border border-sky-400 bg-sky-900/40 inline-block mr-1"></span> Start</span>
-          <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full border-2 border-emerald-400 bg-emerald-900/40 inline-block mr-1"></span> Accepting (F)</span>
-          <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block mr-1"></span> Active State</span>
+          <span className="flex items-center">
+            <span className="w-2.5 h-2.5 rounded-full border border-sky-400 mr-1"></span>
+            Start
+          </span>
+          <span className="flex items-center">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-emerald-400 mr-1"></span>
+            Accepting (F)
+          </span>
+          <span className="flex items-center">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1"></span>
+            Active State{isNFA ? 's (Set)' : ''}
+          </span>
         </div>
-        <span className="text-slate-500 font-mono">Drag nodes to reposition</span>
+        <span className="text-[10px] text-slate-500">Drag nodes to reposition</span>
       </div>
     </div>
   );

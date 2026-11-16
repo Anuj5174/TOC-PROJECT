@@ -97,10 +97,44 @@ def get_benchmark_details(benchmark_id: str):
             "alphabet": b.alphabet,
             "description": b.description,
             "formal_definition": b.formal_definition,
-            "reference_dfa": b.reference_dfa.to_dict()
+            "reference_dfa": b.reference_dfa.to_dict(),
+            "reference_nfa": b.reference_nfa.to_dict() if b.reference_nfa else None
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+class SubsetConstructionRequest(BaseModel):
+    nfa_data: Dict[str, Any]
+
+
+@router.post("/nfa/to_dfa")
+def api_nfa_to_dfa(req: SubsetConstructionRequest):
+    try:
+        data = req.nfa_data
+        nfa = NFA(
+            states=set(data["states"]),
+            alphabet=set(data["alphabet"]),
+            transitions={},
+            start_state=data["start_state"],
+            accepting_states=set(data["accepting_states"])
+        )
+        for edge in data.get("transitions", []):
+            u, v, lbl = edge["from"], edge["to"], edge["label"]
+            if u not in nfa.transitions:
+                nfa.transitions[u] = {}
+            if lbl not in nfa.transitions[u]:
+                nfa.transitions[u][lbl] = set()
+            nfa.transitions[u][lbl].add(v)
+
+        dfa = nfa.to_dfa()
+        return {
+            "dfa": dfa.to_dict(),
+            "original_nfa_states": len(nfa.states),
+            "result_dfa_states": len(dfa.states)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/dataset/generate")
