@@ -11,7 +11,7 @@ import uvicorn
 def main():
     print("=" * 70)
     print("  TOC AUTOMATA STUDIO: DFA/NFA Learning & Visualization")
-    print("  Grammatical Inference: RPNI, EDSM, Angluin's L* Active Learning")
+    print("  Grammatical Inference: RPNI (Regular Positive & Negative Inference)")
     print("=" * 70)
     print("\nStarting server at http://127.0.0.1:8000 ...")
     print("Press Ctrl+C to stop.\n")

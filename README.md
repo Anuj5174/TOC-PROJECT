@@ -23,7 +23,6 @@ An interactive educational platform designed to learn approximate finite-state a
 3. **Develop or integrate an automata-inference algorithm**:
    - **Prefix Tree Acceptor (PTA)**: Maximal tree hypothesis accepting $S^+$.
    - **RPNI (Regular Positive and Negative Inference)**: Shortlex state merging with deterministic quotient folding and negative conflict rollback.
-   - **EDSM (Evidence-Driven State Merging)**: Greedy heuristic prioritizing candidate merges by mutual statistical evidence score.
 
 4. **Visualize states, transitions, accepting states, and execution paths**:
    - Canvas-accelerated interactive graph visualizer powered by **Cytoscape.js**.
@@ -56,7 +55,7 @@ python run.py
 Open your browser at **`http://127.0.0.1:8000`**.
 
 ### 2. Run Backend Unit Tests
-To verify all DFA/NFA operations, subset construction, RPNI, EDSM, and experiment endpoints:
+To verify all DFA/NFA operations, subset construction, RPNI, and experiment endpoints:
 ```bash
 python -m unittest discover -s backend/tests -p "test_*.py"
 ```
@@ -85,14 +84,13 @@ d:\TOC/
 │   │   └── generator.py         # Balanced sampler, noise injector, train/test split
 │   ├── learning/
 │   │   ├── pta.py               # Prefix Tree Acceptor (PTA) construction
-│   │   ├── rpni.py              # RPNI algorithm with quotient folding & rollback
-│   │   └── edsm.py              # Evidence-Driven State Merging (EDSM)
+│   │   └── rpni.py              # RPNI algorithm with quotient folding & rollback
 │   ├── analysis/
 │   │   ├── metrics.py           # Classification metrics & confusion matrix
 │   │   └── noise_study.py       # Empirical experiments: quantity, diversity, noise
 │   └── tests/
 │       ├── test_automata.py     # Unit tests for DFA, NFA, subset construction
-│       ├── test_inference.py    # Unit tests for RPNI and EDSM
+│       ├── test_inference.py    # Unit tests for RPNI
 │       └── test_api.py          # FastAPI endpoint integration tests
 ├── frontend/
 │   ├── package.json

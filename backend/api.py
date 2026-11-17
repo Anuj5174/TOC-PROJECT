@@ -19,7 +19,6 @@ from backend.datasets.benchmarks import list_benchmarks, get_benchmark, BENCHMAR
 from backend.datasets.generator import create_dataset
 from backend.learning.pta import PTA
 from backend.learning.rpni import RPNI
-from backend.learning.edsm import EDSM
 from backend.analysis.metrics import evaluate_model
 from backend.analysis.noise_study import (
     run_quantity_experiment,
@@ -172,16 +171,9 @@ def api_learn_automaton(req: LearnRequest):
         pta_obj = PTA(pos, set(alphabet))
         pta_dict = pta_obj.to_dict()
 
-        # 2. Run selected inference algorithm
-        history = []
-        if req.algorithm.lower() == "rpni":
-            learner = RPNI(pos, neg, alphabet, noise_tolerance=req.noise_tolerance)
-            inferred_dfa, history = learner.run()
-        elif req.algorithm.lower() == "edsm":
-            learner = EDSM(pos, neg, alphabet)
-            inferred_dfa, history = learner.run()
-        else:
-            raise HTTPException(status_code=400, detail=f"Unknown algorithm '{req.algorithm}'. Supported: 'rpni', 'edsm'.")
+        # 2. Run RPNI inference algorithm
+        learner = RPNI(pos, neg, alphabet, noise_tolerance=req.noise_tolerance)
+        inferred_dfa, history = learner.run()
 
         # 3. Evaluation on unseen strings if test_set provided
         evaluation = None

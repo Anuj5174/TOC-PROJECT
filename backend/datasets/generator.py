@@ -1,4 +1,4 @@
-"""
+            """
 Dataset generator for regular languages.
 Generates balanced positive and negative strings, supports synthetic label noise,
 and handles custom user-provided datasets.

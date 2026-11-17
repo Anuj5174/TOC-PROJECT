@@ -1,12 +1,11 @@
 """
-Unit tests for RPNI and EDSM automata-inference algorithms.
+Unit tests for RPNI automata-inference algorithm.
 """
 
 import unittest
 from backend.datasets.benchmarks import get_benchmark
 from backend.datasets.generator import create_dataset
 from backend.learning.rpni import RPNI
-from backend.learning.edsm import EDSM
 
 
 class TestInference(unittest.TestCase):
@@ -33,21 +32,6 @@ class TestInference(unittest.TestCase):
             w = item["raw_word"]
             expected = item["label"]
             self.assertEqual(inferred_dfa.accepts(w), expected)
-
-    def test_edsm_learning(self):
-        bench = get_benchmark("ends_with_01")
-        ds = create_dataset(benchmark_id="ends_with_01", train_size=50, test_size=30, noise_rate=0.0, seed=123)
-        pos = [it["raw_word"] for it in ds["train"] if it["label"]]
-        neg = [it["raw_word"] for it in ds["train"] if not it["label"]]
-
-        edsm = EDSM(pos, neg, bench.alphabet)
-        inferred_dfa, history = edsm.run()
-
-        self.assertGreater(len(history), 0)
-        for p in pos:
-            self.assertTrue(inferred_dfa.accepts(p))
-        for n in neg:
-            self.assertFalse(inferred_dfa.accepts(n))
 
 
 if __name__ == "__main__":

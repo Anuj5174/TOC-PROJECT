@@ -10,7 +10,6 @@ export default function LearningPanel({
   onRunLearning,
   loading
 }) {
-  const [algorithm, setAlgorithm] = useState('rpni');
   const [noiseTolerance, setNoiseTolerance] = useState(0.0);
   const [activeView, setActiveView] = useState('inferred'); // 'inferred', 'pta', 'merges'
 
@@ -22,7 +21,7 @@ export default function LearningPanel({
     const neg = dataset.train.filter(it => !it.label).map(it => it.raw_word);
 
     onRunLearning({
-      algorithm,
+      algorithm: 'rpni',
       benchmark_id: selectedBenchmark,
       alphabet: dataset.alphabet || ['0', '1'],
       positive_examples: pos,
@@ -43,47 +42,27 @@ export default function LearningPanel({
             <label className="block text-xs font-semibold text-slate-400 mb-1">
               Inference Algorithm
             </label>
-            <div className="flex rounded-lg bg-slate-800 p-1 border border-slate-700">
-              <button
-                onClick={() => setAlgorithm('rpni')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  algorithm === 'rpni'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                RPNI (Shortlex Order)
-              </button>
-              <button
-                onClick={() => setAlgorithm('edsm')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  algorithm === 'edsm'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                EDSM (Evidence Driven)
-              </button>
+            <div className="px-3.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold text-sky-400 flex items-center space-x-1.5">
+              <Cpu className="w-3.5 h-3.5 text-sky-400" />
+              <span>RPNI (Regular Positive & Negative Inference)</span>
             </div>
           </div>
 
-          {algorithm === 'rpni' && (
-            <div>
-              <div className="flex justify-between text-xs text-slate-400 mb-1">
-                <span>Noise Tolerance (τ)</span>
-                <span className="font-mono text-amber-400">{Math.round(noiseTolerance * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0.0"
-                max="0.3"
-                step="0.05"
-                value={noiseTolerance}
-                onChange={(e) => setNoiseTolerance(Number(e.target.value))}
-                className="w-36 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
-              />
+          <div>
+            <div className="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Noise Tolerance (τ)</span>
+              <span className="font-mono text-amber-400">{Math.round(noiseTolerance * 100)}%</span>
             </div>
-          )}
+            <input
+              type="range"
+              min="0.0"
+              max="0.3"
+              step="0.05"
+              value={noiseTolerance}
+              onChange={(e) => setNoiseTolerance(Number(e.target.value))}
+              className="w-36 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+            />
+          </div>
         </div>
 
         <button
@@ -146,7 +125,7 @@ export default function LearningPanel({
         <AutomataGraph
           dfa={learningResult?.inferred_dfa}
           title="Inferred Finite-State Automaton"
-          subtitle={`Synthesized via ${algorithm.toUpperCase()} from ${dataset?.train?.length || 0} labeled samples`}
+          subtitle={`Synthesized via RPNI from ${dataset?.train?.length || 0} labeled samples`}
           height="450px"
         />
       )}

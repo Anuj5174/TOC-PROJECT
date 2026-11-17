@@ -6,7 +6,7 @@ import SimulationPanel from './components/SimulationPanel';
 import NoiseStudyPanel from './components/NoiseStudyPanel';
 import { AlertCircle } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('automata');

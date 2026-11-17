@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, SkipBack, SkipForward, RotateCcw, CheckCircle, XCircle, GitFork, ArrowRight, Sparkles } from 'lucide-react';
 import AutomataGraph from './AutomataGraph';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export default function SimulationPanel({
   inferredDfa,
